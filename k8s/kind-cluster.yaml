@@ -9,8 +9,15 @@
 #   - Rolling updates with PodDisruptionBudget
 #   - Real-world workload distribution
 #
-# The control-plane is labeled ingress-ready=true so an Ingress
-# controller (nginx) can be scheduled onto it later.
+# CNI: Calico (installed separately after cluster creation).
+#   disableDefaultCNI: true → no kindnet
+#   podSubnet / serviceSubnet → explicit when default CNI is disabled
+#
+# kube-proxy: kept (default). Calico handles pod networking + NetworkPolicy;
+# kube-proxy handles Service virtual IP routing. Standard separation.
+#
+# The control-plane is labeled ingress-ready=true so nginx-ingress
+# can be scheduled onto it later.
 #
 # Ports 80 and 443 on the host map into the control-plane container,
 # so Ingress-exposed services are reachable at http(s)://localhost.
@@ -18,6 +25,11 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: secureflow
+
+networking:
+  disableDefaultCNI: true
+  podSubnet: "10.244.0.0/16"
+  serviceSubnet: "10.96.0.0/16"
 
 nodes:
   - role: control-plane

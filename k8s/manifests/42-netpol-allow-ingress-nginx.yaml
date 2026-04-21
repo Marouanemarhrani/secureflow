@@ -1,0 +1,37 @@
+# k8s/manifests/42-netpol-allow-ingress-nginx.yaml
+#
+# Allow inbound traffic to notes-api pods ONLY from the ingress-nginx
+# namespace, ONLY on port 8080 (the container port).
+#
+# This is the production pattern:
+#   - External users -> Ingress Controller (public-facing, in its own ns)
+#   - Ingress Controller -> backend pods (internal, this rule)
+# No pod outside ingress-nginx can reach notes-api directly.
+#
+# If someone compromises a pod in e.g. default or kube-system, they
+# CANNOT pivot to notes-api. Only the nginx pod can, and that's
+# tightly scoped.
+#
+# podSelector: matches the notes-api pods by app label.
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-from-nginx
+  namespace: secureflow
+  labels:
+    app.kubernetes.io/part-of: secureflow-platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: notes-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080

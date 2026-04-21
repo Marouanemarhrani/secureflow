@@ -1,0 +1,36 @@
+# k8s/manifests/41-netpol-allow-dns.yaml
+#
+# Allow pods in secureflow namespace to make DNS queries to CoreDNS.
+#
+# Why egress to port 53 only? Because DNS is the only outbound call our
+# app needs. No external API calls, no package fetches, no telemetry.
+# Principle of least privilege — everything else stays blocked.
+#
+# CoreDNS runs in kube-system namespace with label k8s-app=kube-dns.
+# We allow egress to any pod in kube-system matching that label,
+# on UDP/53 (primary) and TCP/53 (used for large responses / zone transfers).
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: secureflow
+  labels:
+    app.kubernetes.io/part-of: secureflow-platform
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

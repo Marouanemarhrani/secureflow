@@ -1,0 +1,28 @@
+# k8s/manifests/40-netpol-default-deny.yaml
+#
+# Default deny for the secureflow namespace.
+#
+# Zero-trust baseline: nothing in, nothing out unless explicitly allowed
+# by another NetworkPolicy. Any additional policy is ADDITIVE — they
+# combine with OR semantics. So this "deny all" + an "allow X" yields
+# "allow X, deny everything else".
+#
+# podSelector: {}  — matches ALL pods in the namespace
+# policyTypes: [Ingress, Egress]  — applies both directions
+# No `ingress:` or `egress:` keys → implicit "deny all" in both directions
+#
+# CKV2_K8S_6 (Checkov: pods should have associated NetworkPolicy) — this
+# is the policy that fixes the finding we documented in .checkov.yaml.
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: secureflow
+  labels:
+    app.kubernetes.io/part-of: secureflow-platform
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
