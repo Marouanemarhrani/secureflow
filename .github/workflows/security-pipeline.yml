@@ -98,3 +98,30 @@ jobs:
           framework: dockerfile
           quiet: true
           soft_fail: false
+
+  # ----------------------------------------------------------------------
+  # Gate 5 — Container image scanning with Trivy (image mode)
+  # Catches: CVEs in the JRE and OS packages baked into the Docker image.
+  # Complements Gate 3 (pom.xml deps) — this one sees the full runtime stack.
+  # Reuses the same .trivyignore to stay consistent with dependency exceptions.
+  # ----------------------------------------------------------------------
+  trivy-image:
+    name: "Gate 5 — Trivy (container image)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build the Docker image
+        run: docker build -t secureflow/notes-api:ci ./notes-api
+
+      - name: Scan the built image
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: image
+          image-ref: secureflow/notes-api:ci
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+          format: table
+          trivyignores: .trivyignore
