@@ -198,3 +198,31 @@ jobs:
           config_file: .checkov.yaml
           quiet: true
           soft_fail: false
+
+  # ----------------------------------------------------------------------
+  # Gate 8 — Policy-as-code validation with Kyverno CLI
+  # Catches: K8s manifests that would be rejected by the cluster's
+  # Kyverno ClusterPolicies (runAsNonRoot, resource limits, hostPath, etc).
+  # Runs the SAME policies that enforce at admission time in the cluster,
+  # but in CI — so violations are caught at PR time, not deploy time.
+  # ----------------------------------------------------------------------
+  kyverno:
+    name: "Gate 8 — Kyverno (policy-as-code)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Kyverno CLI
+        uses: kyverno/action-install-cli@v0.2.0
+        with:
+          release: v1.12.6
+
+      - name: Verify Kyverno CLI
+        run: kyverno version
+
+      - name: Apply Kyverno policies against K8s manifests
+        run: |
+          kyverno apply k8s/policies/ \
+            --resource k8s/manifests/ \
+            --policy-report

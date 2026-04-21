@@ -1,0 +1,40 @@
+# k8s/policies/05-require-read-only-root-fs.yaml
+#
+# A writable root filesystem lets an attacker with RCE persist
+# malware, modify binaries, or write webshells inside the container.
+# A read-only root fs means even after compromise, the attacker
+# cannot maintain persistence between pod restarts.
+#
+# Apps that need scratch space should mount an emptyDir on /tmp
+# (see 10-deployment.yaml for the pattern).
+
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-read-only-root-fs
+  annotations:
+    policies.kyverno.io/title: Require read-only root filesystem
+    policies.kyverno.io/category: Pod Security Standards (Restricted)
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Pod
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-readonly-rootfs
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - "secureflow"
+      validate:
+        message: >-
+          Every container must set
+          securityContext.readOnlyRootFilesystem=true.
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  readOnlyRootFilesystem: true

@@ -1,0 +1,40 @@
+# k8s/policies/04-disallow-host-path.yaml
+#
+# hostPath volumes mount files or directories from the node's
+# filesystem directly into the pod. This is a classic container
+# escape vector — an attacker with RCE in a pod can read/write
+# host files if hostPath is mounted.
+#
+# Legitimate uses (e.g., cluster components needing /proc, /sys)
+# should live in kube-system. Application workloads have no business
+# with hostPath.
+
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-host-path
+  annotations:
+    policies.kyverno.io/title: Disallow hostPath Volumes
+    policies.kyverno.io/category: Pod Security Standards (Baseline)
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-hostpath
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - "secureflow"
+      validate:
+        message: >-
+          hostPath volumes are not allowed. Use emptyDir,
+          configMap, secret, or a PersistentVolumeClaim instead.
+        pattern:
+          spec:
+            =(volumes):
+              - X(hostPath): "null"

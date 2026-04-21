@@ -1,0 +1,40 @@
+# k8s/policies/03-require-resource-limits.yaml
+#
+# Pods without CPU and memory limits can monopolize node resources.
+# An accidentally broken app with a memory leak can evict all other
+# pods on the node before the kubelet intervenes.
+#
+# Enforcing limits forces capacity planning up-front.
+
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+  annotations:
+    policies.kyverno.io/title: Require Resource Limits
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Pod
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-limits
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - "secureflow"
+      validate:
+        message: >-
+          Every container must declare both
+          resources.limits.cpu and resources.limits.memory.
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    memory: "?*"
+                    cpu: "?*"

@@ -1,0 +1,55 @@
+# k8s/policies/01-require-run-as-nonroot.yaml
+#
+# ClusterPolicy enforced by Kyverno at admission time.
+#
+# Rejects any Pod that doesn't explicitly set runAsNonRoot=true at
+# either the pod or container level. This prevents containers from
+# running as UID 0 (root), even if the base image defaults to root.
+#
+# validationFailureAction: Enforce — the pod is REJECTED. Audit mode
+# would just record a PolicyReport without blocking.
+#
+# background: true — Kyverno also scans EXISTING pods and reports on
+# violations. Useful for finding drift in long-lived clusters.
+#
+# Exclusion: kube-system — lots of K8s control-plane components run
+# as root by design (CNI agents, node-exporter-like things). Narrow
+# exclusions are safer than broad ones.
+
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-run-as-nonroot
+  annotations:
+    policies.kyverno.io/title: Require runAsNonRoot
+    policies.kyverno.io/category: Pod Security Standards (Restricted)
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Containers must run as a non-root user. This aligns with the
+      Kubernetes Restricted Pod Security Standard.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-runasnonroot
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - "secureflow"
+      validate:
+        message: >-
+          Pods in the secureflow namespace must set
+          spec.securityContext.runAsNonRoot=true OR
+          spec.containers[*].securityContext.runAsNonRoot=true.
+        anyPattern:
+          - spec:
+              securityContext:
+                runAsNonRoot: true
+          - spec:
+              containers:
+                - securityContext:
+                    runAsNonRoot: true

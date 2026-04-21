@@ -1,0 +1,43 @@
+# k8s/policies/02-disallow-privileged.yaml
+#
+# Privileged containers effectively have root access to the host node.
+# They can modify kernel parameters, load kernel modules, mount the
+# host filesystem, and break out of container isolation.
+#
+# Kubernetes Restricted Pod Security Standard requires this to be
+# either unset or explicitly false.
+
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged-containers
+  annotations:
+    policies.kyverno.io/title: Disallow Privileged Containers
+    policies.kyverno.io/category: Pod Security Standards (Baseline)
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-privileged
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - "secureflow"
+      validate:
+        message: >-
+          Privileged containers are not allowed.
+          Set spec.containers[*].securityContext.privileged=false
+          or omit the field entirely.
+        pattern:
+          spec:
+            =(initContainers):
+              - =(securityContext):
+                  =(privileged): "false"
+            containers:
+              - =(securityContext):
+                  =(privileged): "false"
