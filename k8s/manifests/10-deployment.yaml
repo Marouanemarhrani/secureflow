@@ -1,0 +1,112 @@
+# k8s/manifests/10-deployment.yaml
+#
+# Deployment for the SecureFlow Notes API.
+#
+# - 2 replicas for availability (one pod can die, service stays up)
+# - Pod anti-affinity spreads replicas across different nodes
+# - Resource requests/limits: predictable scheduling, prevents noisy-neighbor
+# - Liveness + readiness probes: self-healing + zero-downtime rollouts
+# - securityContext: non-root, read-only FS, no privilege escalation, drop all capabilities
+# - RollingUpdate strategy: zero-downtime deploys (max 1 unavailable at a time)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notes-api
+  namespace: secureflow
+  labels:
+    app.kubernetes.io/name: notes-api
+    app.kubernetes.io/part-of: secureflow-platform
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 2
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notes-api
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notes-api
+        app.kubernetes.io/part-of: secureflow-platform
+        app.kubernetes.io/component: backend
+    spec:
+      # Spread replicas across different nodes when possible
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: notes-api
+                topologyKey: kubernetes.io/hostname
+
+      # Pod-level security hardening
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: notes-api
+          image: secureflow/notes-api:v1
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # Container-level security hardening
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "384Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /notes
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /notes
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          # H2 in-memory DB needs a writable temp dir; root FS is read-only
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}

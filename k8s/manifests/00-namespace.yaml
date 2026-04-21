@@ -1,0 +1,21 @@
+# k8s/manifests/00-namespace.yaml
+#
+# Dedicated namespace for the SecureFlow Notes API.
+#
+# Why a namespace?
+#   - Scope for RBAC, NetworkPolicy, ResourceQuota
+#   - Clean separation from kube-system and default
+#   - Makes `kubectl get pods -n secureflow` easy
+#
+# Labels:
+#   app.kubernetes.io/name     — identifies the application
+#   app.kubernetes.io/part-of  — groups related resources
+#   Kubernetes standard labels — used by Prometheus, Grafana, etc.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secureflow
+  labels:
+    app.kubernetes.io/name: secureflow
+    app.kubernetes.io/part-of: secureflow-platform

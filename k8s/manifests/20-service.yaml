@@ -1,0 +1,34 @@
+# k8s/manifests/20-service.yaml
+#
+# Service for the SecureFlow Notes API.
+#
+# Type: ClusterIP (default) — internal-only stable endpoint.
+# Pod IPs change; this Service gives us a stable DNS name and
+# virtual IP that always routes to healthy Notes API pods.
+#
+# DNS name inside the cluster:
+#   notes-api.secureflow.svc.cluster.local
+# Short forms that also resolve (depending on the caller's namespace):
+#   notes-api               (from within the 'secureflow' namespace)
+#   notes-api.secureflow    (from any namespace)
+#
+# External exposure will be handled later by an Ingress, not a NodePort.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: notes-api
+  namespace: secureflow
+  labels:
+    app.kubernetes.io/name: notes-api
+    app.kubernetes.io/part-of: secureflow-platform
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: notes-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

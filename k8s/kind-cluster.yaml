@@ -1,0 +1,39 @@
+# k8s/kind-cluster.yaml
+#
+# Local Kubernetes cluster for SecureFlow development.
+#
+# Topology: 1 control-plane + 2 workers.
+# Why 3 nodes? So we can properly test:
+#   - Pod scheduling across workers
+#   - NetworkPolicy between pods on different nodes
+#   - Rolling updates with PodDisruptionBudget
+#   - Real-world workload distribution
+#
+# The control-plane is labeled ingress-ready=true so an Ingress
+# controller (nginx) can be scheduled onto it later.
+#
+# Ports 80 and 443 on the host map into the control-plane container,
+# so Ingress-exposed services are reachable at http(s)://localhost.
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: secureflow
+
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+
+  - role: worker
+  - role: worker
