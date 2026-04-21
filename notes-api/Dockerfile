@@ -26,9 +26,13 @@ WORKDIR /app
 # Copy ONLY the built jar from the builder stage
 COPY --from=builder /build/target/notes-api-*.jar app.jar
 
-# Drop privileges
 USER app:app
 
 EXPOSE 8080
+
+# Healthcheck: probe the Notes API every 30s to verify the container is serving.
+# Kubernetes/Docker use this signal for liveness and restart decisions.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:8080/notes || exit 1
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
