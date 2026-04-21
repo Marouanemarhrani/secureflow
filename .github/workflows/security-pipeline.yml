@@ -1,0 +1,41 @@
+# .github/workflows/security-pipeline.yml
+#
+# SecureFlow security pipeline.
+# Runs on every push and pull request to main.
+# Each "gate" runs as a separate job so failures are isolated and visible.
+
+name: security-pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel any in-progress run when a new commit is pushed to the same branch.
+# Saves CI minutes when you push fast follow-up commits.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ----------------------------------------------------------------------
+  # Gate 1 — Secret scanning with Gitleaks
+  # Catches: hardcoded API keys, tokens, passwords across the entire history
+  # ----------------------------------------------------------------------
+  gitleaks:
+    name: "Gate 1 — Gitleaks (secrets)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 = full git history, required for Gitleaks
+          # to scan past commits, not just the current snapshot.
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
