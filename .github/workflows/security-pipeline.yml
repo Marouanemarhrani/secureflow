@@ -38,14 +38,13 @@ jobs:
 
   # ----------------------------------------------------------------------
   # Gate 2 — Static Application Security Testing (SAST) with Semgrep
-  # Catches: code-level vulnerabilities like SQL injection, XSS, command
-  # injection, weak crypto, unsafe deserialization, etc.
+  # Catches: code-level vulnerabilities like SQL injection, XSS,
+  # command injection, weak crypto, unsafe deserialization, etc.
   # Ruleset: OWASP Top 10 — industry-standard baseline.
   # ----------------------------------------------------------------------
   semgrep:
     name: "Gate 2 — Semgrep (SAST)"
     runs-on: ubuntu-latest
-    # Official Semgrep container — the tool is pre-installed, faster than pip install
     container:
       image: semgrep/semgrep
     steps:
@@ -53,17 +52,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Semgrep scan
-        # --config = which ruleset to use
-        # --error  = exit non-zero if findings are found (fails the job)
-        # --severity ERROR = only fail on high-severity findings (medium/low become warnings)
         run: semgrep --config=p/owasp-top-ten --error --severity=ERROR
-
 
   # ----------------------------------------------------------------------
   # Gate 3 — Dependency scanning with Trivy (filesystem mode)
-  # Catches: known CVEs in libraries declared in pom.xml (direct + transitive)
-  # We fail on HIGH and CRITICAL findings only — LOW/MEDIUM noise is reported
-  # but doesn't block the pipeline (industry-standard trade-off).
+  # Catches: known CVEs in libraries declared in pom.xml (direct + transitive).
+  # We fail on HIGH and CRITICAL findings only.
+  # CVEs in .trivyignore are intentionally skipped with documented justification.
   # ----------------------------------------------------------------------
   trivy-fs:
     name: "Gate 3 — Trivy (dependencies)"
@@ -76,8 +71,9 @@ jobs:
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: fs
-          scan-ref: notes-api           # only scan the app, not the whole repo
-          severity: HIGH,CRITICAL       # report & fail on these levels
-          exit-code: 1                  # non-zero exit = fail the job
-          ignore-unfixed: true          # skip CVEs with no fix available yet
-          format: table                 # human-readable output in CI logs
+          scan-ref: notes-api
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+          format: table
+          trivyignores: .trivyignore

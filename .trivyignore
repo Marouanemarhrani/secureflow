@@ -1,0 +1,25 @@
+# ---------------------------------------------------------------------------
+# .trivyignore — CVEs intentionally skipped by Gate 3 (Trivy fs scan).
+#
+# Rules:
+#  - Every entry MUST include: CVE id, affected lib, date added, expiry date,
+#    and a justification.
+#  - Entries are reviewed every 30 days.
+#  - "Accepted" does NOT mean "safe" — it means the risk is understood and
+#    a fix is pending upstream.
+# ---------------------------------------------------------------------------
+
+# --- Apache Tomcat transitive via spring-boot-starter-web 4.0.5 -------------
+# Both CVEs require log access + JsonAccessLogValve usage. We log to stdout
+# in the container (no file access logs), so exposure is minimal.
+# Fix: Tomcat 11.0.21. Waiting for Spring Boot 4.0.6.
+# Added: 2026-04-21   Expires: 2026-06-21
+CVE-2026-34483
+CVE-2026-34487
+
+# --- Jackson Core transitive via spring-boot-starter-web 4.0.5 --------------
+# Document length bypass. Notes API does not accept user-uploaded JSON
+# larger than the default request limit; attack surface limited.
+# Fix: jackson-core 3.1.1. Waiting for Spring Boot 4.0.6.
+# Added: 2026-04-21   Expires: 2026-06-21
+GHSA-2m67-wjpj-xhg9
