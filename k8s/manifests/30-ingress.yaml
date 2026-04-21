@@ -1,0 +1,42 @@
+# k8s/manifests/30-ingress.yaml
+#
+# Ingress rule for the SecureFlow Notes API.
+#
+# Routes host http://notes.local → Service notes-api on port 80
+# (which in turn load-balances to the two Pods on :8080).
+#
+# Why notes.local and not localhost?
+#   In real K8s, an Ingress controller routes by hostname.
+#   Using "notes.local" forces us to add an /etc/hosts entry,
+#   which mirrors how production DNS would work:
+#     notes.local → 127.0.0.1 (this VM)
+#   Production would be:
+#     notes.example.com → LoadBalancer IP
+#
+# IngressClass: nginx (installed via kind's nginx-ingress manifest).
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: notes-api
+  namespace: secureflow
+  labels:
+    app.kubernetes.io/name: notes-api
+    app.kubernetes.io/part-of: secureflow-platform
+  annotations:
+    # Strip the /api prefix before forwarding to the backend.
+    # e.g. "GET /api/notes" → backend receives "GET /notes"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: notes.local
+      http:
+        paths:
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: notes-api
+                port:
+                  number: 80
