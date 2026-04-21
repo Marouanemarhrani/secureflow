@@ -125,3 +125,53 @@ jobs:
           ignore-unfixed: true
           format: table
           trivyignores: .trivyignore
+
+  # ----------------------------------------------------------------------
+  # Gate 6 — Dynamic Application Security Testing (DAST) with OWASP ZAP
+  # Catches: runtime issues you can't see in static analysis —
+  # missing security headers, verbose errors, CORS misconfig, info leaks.
+  # Runs the actual built container and attacks it over HTTP.
+  # Baseline mode = passive scan only (safe for CI, ~2 min).
+  # ----------------------------------------------------------------------
+  zap-baseline:
+    name: "Gate 6 — OWASP ZAP (DAST)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build the Docker image
+        run: docker build -t secureflow/notes-api:ci ./notes-api
+
+      - name: Start the app container
+        run: |
+          docker run -d --name notes-api -p 8080:8080 secureflow/notes-api:ci
+          echo "Waiting for app to be ready..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:8080/notes > /dev/null; then
+              echo "App is up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "App failed to start within 30s"
+          docker logs notes-api
+          exit 1
+
+      - name: Run OWASP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'http://localhost:8080/notes'
+          cmd_options: '-a'
+          fail_action: false
+          allow_issue_writing: false
+
+      - name: Stop the app container
+        if: always()
+        run: |
+          docker logs notes-api || true
+          docker stop notes-api || true
+          docker rm notes-api || true
