@@ -77,3 +77,24 @@ jobs:
           ignore-unfixed: true
           format: table
           trivyignores: .trivyignore
+
+  # ----------------------------------------------------------------------
+  # Gate 4 — Infrastructure-as-Code scanning with Checkov
+  # Catches: Dockerfile and K8s manifest misconfigurations (missing
+  # HEALTHCHECK, running as root, unpinned image tags, etc.)
+  # Focus: notes-api/Dockerfile. K8s manifests will be added later.
+  # ----------------------------------------------------------------------
+  checkov:
+    name: "Gate 4 — Checkov (IaC)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Checkov on Dockerfile
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: notes-api
+          framework: dockerfile
+          quiet: true
+          soft_fail: false
