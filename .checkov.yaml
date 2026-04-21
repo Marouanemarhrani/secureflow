@@ -1,0 +1,21 @@
+# .checkov.yaml
+#
+# Central configuration for Checkov scans.
+# Documents every skipped check with its reason and expiry date.
+# Reviewed monthly — if a reason no longer applies, remove the skip.
+#
+# Run locally:
+#   checkov -d k8s/manifests --framework kubernetes --config-file .checkov.yaml
+#
+# Run in CI: same flags, see .github/workflows/security-pipeline.yml
+
+framework:
+  - kubernetes
+  - dockerfile
+
+# Rules we have reviewed and are intentionally not enforcing.
+# Each entry must be justified below in the skip-reasons section.
+skip-check:
+  - CKV_K8S_15    # imagePullPolicy must be Always — required for kind local dev; digest pinning will lock content
+  - CKV_K8S_43    # Image should use digest — deferred until GHCR push (Weekend 5)
+  - CKV2_K8S_6    # Pods should have NetworkPolicy — deferred until Tier 2 (pod security & policy)

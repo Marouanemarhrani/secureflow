@@ -79,13 +79,13 @@ jobs:
           trivyignores: .trivyignore
 
   # ----------------------------------------------------------------------
-  # Gate 4 — Infrastructure-as-Code scanning with Checkov
-  # Catches: Dockerfile and K8s manifest misconfigurations (missing
-  # HEALTHCHECK, running as root, unpinned image tags, etc.)
-  # Focus: notes-api/Dockerfile. K8s manifests will be added later.
+  # Gate 4 — Infrastructure-as-Code scanning with Checkov (Dockerfile)
+  # Catches: Dockerfile misconfigurations — missing HEALTHCHECK, running
+  # as root, unpinned image tags, exposed docker socket, etc.
+  # Focus: notes-api/Dockerfile. K8s manifests are scanned separately in Gate 7.
   # ----------------------------------------------------------------------
   checkov:
-    name: "Gate 4 — Checkov (IaC)"
+    name: "Gate 4 — Checkov (Dockerfile)"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -175,3 +175,26 @@ jobs:
           docker logs notes-api || true
           docker stop notes-api || true
           docker rm notes-api || true
+
+  # ----------------------------------------------------------------------
+  # Gate 7 — Kubernetes manifest scanning with Checkov
+  # Catches: pod running as root, missing securityContext, missing resource
+  # limits, hostPath mounts, default namespace usage, missing probes, etc.
+  # Runs the same Checkov version as Gate 4, but with the kubernetes
+  # framework and our central .checkov.yaml skip configuration.
+  # ----------------------------------------------------------------------
+  checkov-k8s:
+    name: "Gate 7 — Checkov (K8s manifests)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Checkov on Kubernetes manifests
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: k8s/manifests
+          framework: kubernetes
+          config_file: .checkov.yaml
+          quiet: true
+          soft_fail: false

@@ -6,7 +6,8 @@
 # - Pod anti-affinity spreads replicas across different nodes
 # - Resource requests/limits: predictable scheduling, prevents noisy-neighbor
 # - Liveness + readiness probes: self-healing + zero-downtime rollouts
-# - securityContext: non-root, read-only FS, no privilege escalation, drop all capabilities
+# - securityContext: non-root (UID 10001), read-only FS, no privilege escalation, drop all capabilities
+# - automountServiceAccountToken: false — app doesn't call K8s API
 # - RollingUpdate strategy: zero-downtime deploys (max 1 unavailable at a time)
 
 apiVersion: apps/v1
@@ -49,18 +50,25 @@ spec:
                     app.kubernetes.io/name: notes-api
                 topologyKey: kubernetes.io/hostname
 
+      # Disable automount of the default service account token.
+      # Our app is a plain REST API, it doesn't call the K8s API, so a
+      # mounted token is just sitting there as attack surface. (CKV_K8S_38)
+      automountServiceAccountToken: false
+
       # Pod-level security hardening
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        # High UID to avoid collision with any host user. (CKV_K8S_40)
+        # Must match the UID created in the Dockerfile.
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
 
       containers:
         - name: notes-api
-          image: secureflow/notes-api:v1
+          image: secureflow/notes-api:v2
           imagePullPolicy: IfNotPresent
 
           ports:

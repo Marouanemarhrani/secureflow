@@ -19,7 +19,7 @@ RUN ./mvnw clean package -DskipTests -B
 FROM eclipse-temurin:21-jre
 
 # Create a non-root user to run the app (security best practice)
-RUN groupadd --system app && useradd --system --gid app app
+RUN groupadd --system --gid 10001 app && useradd --system --uid 10001 --gid app app
 
 WORKDIR /app
 
