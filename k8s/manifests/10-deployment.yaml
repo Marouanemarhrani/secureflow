@@ -20,7 +20,7 @@ metadata:
     app.kubernetes.io/part-of: secureflow-platform
     app.kubernetes.io/component: backend
 spec:
-  replicas: 2
+  replicas: 3
 
   strategy:
     type: RollingUpdate

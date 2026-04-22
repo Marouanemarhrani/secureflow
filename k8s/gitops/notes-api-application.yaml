@@ -1,0 +1,48 @@
+# k8s/gitops/notes-api-application.yaml
+#
+# Argo CD Application — tells Argo CD to watch our git repo and keep
+# the `secureflow` namespace in sync with what's under k8s/manifests/.
+#
+# This single file IS the GitOps entrypoint. After applying it once,
+# every future change to k8s/manifests/ is automatically deployed.
+# No more `kubectl apply` in CI. No kubectl credentials needed anywhere
+# except locally on the Argo CD controller itself.
+#
+# Key fields:
+#   source.repoURL       → which git repo to watch
+#   source.path          → which folder in the repo
+#   source.targetRevision → which branch
+#   destination.namespace → which namespace to deploy into
+#   syncPolicy.automated  → auto-sync on every commit
+#     .prune              → delete resources removed from git
+#     .selfHeal           → undo manual kubectl changes that drift from git
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: notes-api
+  namespace: argocd
+  # Finalizer ensures Argo CD cleans up managed resources when this
+  # Application is deleted. Without it, deleting the Application
+  # leaves orphaned pods/services behind.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Marouanemarhrani/secureflow.git
+    targetRevision: main
+    path: k8s/manifests
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: secureflow
+
+  syncPolicy:
+    automated:
+      prune: true      # delete resources no longer in git
+      selfHeal: true   # revert any manual changes
+    syncOptions:
+      - CreateNamespace=true  # create `secureflow` ns if missing
+      - ServerSideApply=true  # handle large CRDs cleanly
