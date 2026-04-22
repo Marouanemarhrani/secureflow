@@ -68,7 +68,7 @@ spec:
 
       containers:
         - name: notes-api
-          image: secureflow/notes-api:v2
+          image: secureflow/notes-api:v3
           imagePullPolicy: IfNotPresent
 
           ports:

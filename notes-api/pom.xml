@@ -58,6 +58,18 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Actuator — exposes health, metrics, info endpoints -->
+		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
+		<!-- Micrometer Prometheus — formats metrics for Prometheus scraping -->
+		<dependency>
+    			<groupId>io.micrometer</groupId>
+    			<artifactId>micrometer-registry-prometheus</artifactId>
+    			<scope>runtime</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
