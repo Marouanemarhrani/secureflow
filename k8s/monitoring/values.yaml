@@ -1,0 +1,103 @@
+# k8s/monitoring/values.yaml
+#
+# Helm values for kube-prometheus-stack tuned for low-RAM local cluster.
+# Production would remove these restrictions and use persistent storage.
+
+# --- Prometheus server ---
+prometheus:
+  prometheusSpec:
+    # Keep only 6 hours of metrics (vs default 10 days)
+    retention: 6h
+    # Lower resource requests/limits
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    # Single replica (default is also 1, being explicit)
+    replicas: 1
+    # No persistent volume — metrics will be lost on pod restart
+    # (fine for dev, never in prod)
+    storageSpec: {}
+    # Scrape our own ServiceMonitors + discover any namespace
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+# --- Grafana ---
+grafana:
+  # Admin password — we'll fetch via kubectl later
+  adminPassword: "secureflow-admin-CHANGE-ME"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  # No persistent volume for dashboards — dashboards will be recreated via ConfigMap
+  persistence:
+    enabled: false
+  # Disable default dashboards we don't need (saves RAM during ingestion)
+  defaultDashboardsEnabled: true
+
+# --- Alertmanager ---
+# We're not configuring alert routing — run minimal
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    replicas: 1
+    storage: {}
+
+# --- node-exporter ---
+# Runs as DaemonSet, one per node — 3 pods of ~20MB each
+nodeExporter:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+# --- kube-state-metrics ---
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# --- Prometheus Operator (the CRD controller) ---
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# --- Disable things we don't need ---
+# We don't have etcd accessible externally in kind
+kubeEtcd:
+  enabled: false
+
+# kubeScheduler, kubeControllerManager monitoring not exposed in kind by default
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+# kube-proxy is there but kind doesn't expose its metrics port by default
+kubeProxy:
+  enabled: false

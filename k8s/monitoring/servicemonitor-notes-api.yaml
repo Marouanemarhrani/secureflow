@@ -1,0 +1,33 @@
+# k8s/monitoring/servicemonitor-notes-api.yaml
+#
+# Tells Prometheus (via Prometheus Operator) to scrape metrics from
+# our notes-api Service.
+#
+# The operator watches ServiceMonitor CRDs across all namespaces and
+# generates Prometheus scrape config automatically. This is the
+# Kubernetes-native way to onboard an app to monitoring.
+#
+# Selector: matches any Service with label
+# app.kubernetes.io/name=notes-api in the secureflow namespace.
+# Scrape path /actuator/prometheus every 30s.
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: notes-api
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: secureflow-platform
+    release: kube-prometheus-stack   # Required: matches chart's serviceMonitorSelector
+spec:
+  namespaceSelector:
+    matchNames:
+      - secureflow
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notes-api
+  endpoints:
+    - port: http                      # Named port from the Service (must match)
+      path: /actuator/prometheus
+      interval: 30s
+      scrapeTimeout: 10s
