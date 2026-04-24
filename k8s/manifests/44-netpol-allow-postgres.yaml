@@ -1,0 +1,59 @@
+# k8s/manifests/44-netpol-allow-postgres.yaml
+#
+# Two NetworkPolicies to allow notes-api <-> postgres on port 5432.
+#
+# Because our default-deny policy covers BOTH Ingress and Egress, we
+# must explicitly allow:
+#   1. Ingress TO postgres from notes-api (otherwise postgres drops the packet)
+#   2. Egress FROM notes-api to postgres (otherwise notes-api can't send)
+#
+# Keeping both rules in one file since they're two halves of the same story:
+# "notes-api talks to postgres on port 5432".
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-notes-api-to-postgres
+  namespace: secureflow
+  labels:
+    app.kubernetes.io/part-of: secureflow-platform
+    app.kubernetes.io/component: network-policy
+spec:
+  # Apply to postgres — controlling who can talk TO it
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: notes-api
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-notes-api-egress-to-postgres
+  namespace: secureflow
+  labels:
+    app.kubernetes.io/part-of: secureflow-platform
+    app.kubernetes.io/component: network-policy
+spec:
+  # Apply to notes-api — controlling what it can talk TO
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: notes-api
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: postgres
+    ports:
+    - protocol: TCP
+      port: 5432

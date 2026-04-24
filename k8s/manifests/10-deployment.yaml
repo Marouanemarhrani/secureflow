@@ -68,13 +68,21 @@ spec:
 
       containers:
         - name: notes-api
-          image: secureflow/notes-api:v3
+          image: secureflow/notes-api:v4
           imagePullPolicy: IfNotPresent
 
           ports:
             - name: http
               containerPort: 8080
               protocol: TCP
+
+          # Inject DB credentials from the postgres Secret.
+          # This maps SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME,
+          # SPRING_DATASOURCE_PASSWORD into the container environment so
+          # Spring Boot's auto-configuration picks them up at startup.
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
 
           # Container-level security hardening
           securityContext:
@@ -96,7 +104,7 @@ spec:
             httpGet:
               path: /notes
               port: http
-            initialDelaySeconds: 20
+            initialDelaySeconds: 45
             periodSeconds: 15
             timeoutSeconds: 3
             failureThreshold: 3
@@ -105,12 +113,12 @@ spec:
             httpGet:
               path: /notes
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
 
-          # H2 in-memory DB needs a writable temp dir; root FS is read-only
+          # Spring/JVM needs a writable /tmp for scratch files; root FS is read-only
           volumeMounts:
             - name: tmp
               mountPath: /tmp
