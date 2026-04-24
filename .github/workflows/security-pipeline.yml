@@ -148,7 +148,28 @@ jobs:
 
       - name: Start the app container
         run: |
-          docker run -d --name notes-api -p 8080:8080 secureflow/notes-api:ci
+          # Start PostgreSQL sidecar for the smoke test.
+          # Using a Docker network so notes-api can resolve the DB by hostname.
+          # This mirrors the production topology: stateless app + external DB.
+          docker network create smoketest
+          docker run -d --name postgres --network smoketest \
+            -e POSTGRES_USER=notes \
+            -e POSTGRES_PASSWORD=notes-ci-password \
+            -e POSTGRES_DB=notes \
+            postgres:16.4-alpine
+          echo "Waiting for Postgres to be ready..."
+          for i in {1..30}; do
+            if docker exec postgres pg_isready -U notes > /dev/null 2>&1; then
+              echo "Postgres is ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+          docker run -d --name notes-api --network smoketest -p 8080:8080 \
+            -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notes \
+            -e SPRING_DATASOURCE_USERNAME=notes \
+            -e SPRING_DATASOURCE_PASSWORD=notes-ci-password \
+            secureflow/notes-api:ci
           echo "Waiting for app to be ready..."
           for i in {1..30}; do
             if curl -sf http://localhost:8080/notes > /dev/null; then
@@ -169,12 +190,14 @@ jobs:
           fail_action: false
           allow_issue_writing: false
 
-      - name: Stop the app container
+      - name: Stop containers and clean up
         if: always()
         run: |
           docker logs notes-api || true
-          docker stop notes-api || true
-          docker rm notes-api || true
+          docker logs postgres || true
+          docker stop notes-api postgres || true
+          docker rm notes-api postgres || true
+          docker network rm smoketest || true
 
   # ----------------------------------------------------------------------
   # Gate 7 — Kubernetes manifest scanning with Checkov

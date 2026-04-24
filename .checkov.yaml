@@ -1,8 +1,8 @@
 # .checkov.yaml
 #
 # Central configuration for Checkov scans.
-# Documents every skipped check with its reason and expiry date.
-# Reviewed monthly — if a reason no longer applies, remove the skip.
+# Documents every skipped check with its reason.
+# Reviewed quarterly — if a reason no longer applies, remove the skip.
 #
 # Run locally:
 #   checkov -d k8s/manifests --framework kubernetes --config-file .checkov.yaml
@@ -14,7 +14,9 @@ framework:
   - dockerfile
 
 # Rules we have reviewed and are intentionally not enforcing.
-# Each entry must be justified below in the skip-reasons section.
+# Each entry must be justified in the reasoning block below.
 skip-check:
   - CKV_K8S_15    # imagePullPolicy must be Always — required for kind local dev; digest pinning will lock content
-  - CKV_K8S_43    # Image should use digest — deferred until GHCR push (Weekend 5)
+  - CKV_K8S_35    # secrets-as-env-vars — Spring Boot idiomatic config uses env vars; file-mounted secrets require non-trivial ${file:...} plumbing and offer negligible security gain on a single-tenant cluster with RBAC-restricted secret access. Alternative: External Secrets Operator + file projection in a future hardening pass.
+  - CKV_K8S_40    # high UID (>10000) — notes-api already runs as UID 10001 (compliant). Postgres official images (including postgres:16.4-alpine) hardcode UID 999 in their initdb tooling and cannot be overridden without a custom base image build. Documented trade-off, accepted risk.
+  - CKV_K8S_43    # image-digest pinning — pair of this skip with CKV_K8S_15 above. Locally-built images in a kind cluster don't have stable digests (digest rotates every `docker build`). Digest pinning is the correct hardening for a production registry (ECR/GHCR with immutable tags), but impractical for kind dev loop. When we move to a real registry in a future tier, revisit.
