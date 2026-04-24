@@ -18,6 +18,29 @@ concurrency:
 
 jobs:
 
+# ----------------------------------------------------------------------
+  # Gate 0 — Unit tests
+  # Catches: logic errors, regressions, broken contracts.
+  # Runs before all security gates — no point scanning a build that
+  # doesn't pass its own tests.
+  # ----------------------------------------------------------------------
+  unit-tests:
+    name: "Gate 0 — Unit Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Run unit tests
+        working-directory: notes-api
+        run: ./mvnw test -B
+
   # ----------------------------------------------------------------------
   # Gate 1 — Secret scanning with Gitleaks
   # Catches: hardcoded API keys, tokens, passwords across the entire history
