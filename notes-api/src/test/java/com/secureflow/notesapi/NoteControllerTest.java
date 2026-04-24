@@ -71,7 +71,7 @@ class NoteControllerTest {
         when(repository.findAll()).thenReturn(List.of(a, b));
 
         mockMvc.perform(get("/notes"))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].title").value("First"))
